@@ -1,0 +1,19 @@
+# Android / Gradle
+.gradle/
+**/build/
+local.properties
+.idea/
+*.iml
+.externalNativeBuild/
+.cxx/
+
+# Local secrets and signing material
+.env
+*.jks
+*.keystore
+!gradle/wrapper/gradle-wrapper.jar
+
+# Generated APKs and reports
+*.apk
+*.aab
+/reports/
