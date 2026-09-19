@@ -4,6 +4,13 @@
 
 > **تنبيه أمني:** لا تضع مفاتيح WireGuard الخاصة أو ملفات التوقيع أو `local.properties` في Git. المفاتيح الموجودة في نسخة GitHub هي قوالب غير صالحة للاستخدام، ويجب استيراد إعداداتك الخاصة من رابط WireGuard أو إضافتها محليًا أثناء التطوير.
 
+## معاينة الواجهة
+
+![واجهة Seloom VPN](docs/screenshots/seloom-vpn-dashboard.png)
+
+تتضمن الواجهة بطاقة حقوق المطور **SELOOM1@** ورابط قناة التلغرام الرسمية:
+[https://t.me/freevpsiraq](https://t.me/freevpsiraq)
+
 ## الميزات
 
 - تشغيل وإيقاف نفق VPN باستخدام مكتبة WireGuard الرسمية لنظام Android.
@@ -68,4 +75,5 @@
 
 ## المطور
 
-**Seloom1** — Seloom VPN
+**Seloom1** — Seloom VPN  
+قناة التلغرام والحقوق: [https://t.me/freevpsiraq](https://t.me/freevpsiraq)
