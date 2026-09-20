@@ -59,6 +59,10 @@ class WireGuardManager(private val context: Context) {
     fun connect(server: VpnServer) {
         scope.launch {
             try {
+                // GoBackend runs the native tunnel in this process. Start the
+                // foreground keep-alive before connecting so removing the app
+                // from Recents cannot kill the process and drop the VPN.
+                VpnKeepAliveService.start(context)
                 _vpnStatus.value = VpnStatus.CONNECTING
                 _errorMessage.value = null
                 val currentBackend = backend ?: error("لم يتم تهيئة محرك WireGuard")
@@ -114,14 +118,6 @@ class WireGuardManager(private val context: Context) {
     }
 
     private fun onConnected() {
-        // Start this only after GoBackend has brought the VPN up. If an OEM
-        // rejects the auxiliary service, the original VPN connection remains
-        // usable instead of failing during connect.
-        try {
-            VpnKeepAliveService.start(context)
-        } catch (e: Exception) {
-            Log.w(TAG, "Unable to start background keep-alive; VPN remains connected", e)
-        }
         connectionStartTime = System.currentTimeMillis()
         lastRxBytes = 0L
         lastTxBytes = 0L
