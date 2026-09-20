@@ -59,6 +59,10 @@ class WireGuardManager(private val context: Context) {
     fun connect(server: VpnServer) {
         scope.launch {
             try {
+                // GoBackend runs the native tunnel in this process. Start the
+                // foreground keep-alive before connecting so removing the app
+                // from Recents cannot kill the process and drop the VPN.
+                VpnKeepAliveService.start(context)
                 _vpnStatus.value = VpnStatus.CONNECTING
                 _errorMessage.value = null
                 val currentBackend = backend ?: error("لم يتم تهيئة محرك WireGuard")
@@ -79,6 +83,7 @@ class WireGuardManager(private val context: Context) {
                                 onConnected()
                             }
                             Tunnel.State.DOWN -> {
+                                VpnKeepAliveService.stop(context)
                                 _vpnStatus.value = VpnStatus.DISCONNECTED
                                 onDisconnected()
                             }
@@ -92,6 +97,7 @@ class WireGuardManager(private val context: Context) {
                 Log.e(TAG, "Connection error", e)
                 _vpnStatus.value = VpnStatus.ERROR
                 _errorMessage.value = e.localizedMessage ?: "فشل تشغيل نفق WireGuard"
+                VpnKeepAliveService.stop(context)
                 stopMonitoring()
             }
         }
@@ -104,6 +110,7 @@ class WireGuardManager(private val context: Context) {
             } catch (e: Exception) {
                 Log.e(TAG, "Error disconnecting", e)
             } finally {
+                VpnKeepAliveService.stop(context)
                 _vpnStatus.value = VpnStatus.DISCONNECTED
                 onDisconnected()
             }
