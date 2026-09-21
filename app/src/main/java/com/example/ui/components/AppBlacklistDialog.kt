@@ -45,6 +45,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.text.font.FontWeight
@@ -64,6 +65,8 @@ fun AppBlacklistDialog(
     onSave: (Set<String>) -> Unit,
     onDismiss: () -> Unit
 ) {
+    val screenHeight = LocalConfiguration.current.screenHeightDp.dp
+    val maxDialogHeight = (screenHeight * 0.86f).coerceAtLeast(520.dp)
     var selected by remember(selectedPackages) { mutableStateOf(selectedPackages) }
     var searchQuery by remember { mutableStateOf("") }
     var showSystemApps by remember { mutableStateOf(false) }
@@ -83,6 +86,7 @@ fun AppBlacklistDialog(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(12.dp)
+                .heightIn(max = maxDialogHeight)
                 .clip(RoundedCornerShape(22.dp))
                 .background(CyberCardBg)
                 .border(1.6.dp, NeonCyan, RoundedCornerShape(22.dp))
@@ -167,7 +171,10 @@ fun AppBlacklistDialog(
             }
             Spacer(modifier = Modifier.height(10.dp))
             LazyColumn(
-                modifier = Modifier.fillMaxWidth().heightIn(max = 420.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f, fill = true)
+                    .heightIn(min = 96.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 if (filteredApps.isEmpty()) {
