@@ -1,8 +1,7 @@
 package com.example.ui.components
 
-import android.graphics.Bitmap
-import android.graphics.Canvas
 import android.graphics.drawable.Drawable
+import android.widget.ImageView
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -22,6 +21,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
@@ -45,8 +45,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -67,12 +67,15 @@ fun AppBlacklistDialog(
     var selected by remember(selectedPackages) { mutableStateOf(selectedPackages) }
     var searchQuery by remember { mutableStateOf("") }
     var showSystemApps by remember { mutableStateOf(false) }
-    val filteredApps = remember(apps, searchQuery, showSystemApps) {
+    val filteredApps = remember(apps, searchQuery, showSystemApps, selected) {
         val query = searchQuery.trim().lowercase()
         apps.filter { app ->
             (showSystemApps || !app.isSystemApp) &&
                 (query.isEmpty() || app.label.lowercase().contains(query) || app.packageName.lowercase().contains(query))
-        }
+        }.sortedWith(
+            compareByDescending<InstalledApp> { it.packageName in selected }
+                .thenBy { it.label.lowercase() }
+        )
     }
 
     Dialog(onDismissRequest = onDismiss) {
@@ -209,7 +212,13 @@ fun AppBlacklistDialog(
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(containerColor = NeonCyan)
             ) {
-                Text("حفظ وتطبيق (${selected.size})", color = Color(0xFF020919), fontWeight = FontWeight.Bold)
+                Icon(Icons.Default.Save, contentDescription = "حفظ الإعدادات", tint = Color(0xFF020919))
+                Text(
+                    "حفظ وتطبيق (${selected.size})",
+                    color = Color(0xFF020919),
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(start = 8.dp)
+                )
             }
         }
     }
@@ -218,26 +227,24 @@ fun AppBlacklistDialog(
 @Composable
 private fun AppIcon(packageName: String, label: String) {
     val context = LocalContext.current
-    val bitmap = remember(packageName) {
-        runCatching { drawableToBitmap(context.packageManager.getApplicationIcon(packageName)) }.getOrNull()
-    }
-    if (bitmap != null) {
-        Image(
-            bitmap = bitmap.asImageBitmap(),
-            contentDescription = "أيقونة $label",
-            modifier = Modifier.size(42.dp).clip(RoundedCornerShape(10.dp))
-        )
-    } else {
-        Icon(Icons.Default.Shield, contentDescription = "أيقونة $label", tint = NeonCyan, modifier = Modifier.size(42.dp))
-    }
-}
-
-private fun drawableToBitmap(drawable: Drawable): Bitmap {
-    val width = drawable.intrinsicWidth.coerceAtLeast(1)
-    val height = drawable.intrinsicHeight.coerceAtLeast(1)
-    return Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888).also { bitmap ->
-        val canvas = Canvas(bitmap)
-        drawable.setBounds(0, 0, canvas.width, canvas.height)
-        drawable.draw(canvas)
-    }
+    val fallbackIcon = remember { context.getDrawable(com.example.R.drawable.app_icon_vpn_1789770995926) }
+    AndroidView(
+        factory = { viewContext ->
+            ImageView(viewContext).apply {
+                scaleType = ImageView.ScaleType.CENTER_INSIDE
+                setPadding(3, 3, 3, 3)
+            }
+        },
+        update = { imageView ->
+            imageView.setImageDrawable(
+                runCatching { context.packageManager.getApplicationIcon(packageName) }
+                    .getOrElse { fallbackIcon }
+            )
+            imageView.contentDescription = "أيقونة $label"
+        },
+        modifier = Modifier
+            .size(42.dp)
+            .clip(RoundedCornerShape(10.dp))
+            .background(Color(0xFF102A46))
+    )
 }
