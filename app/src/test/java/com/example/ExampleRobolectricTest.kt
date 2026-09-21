@@ -24,13 +24,13 @@ class ExampleRobolectricTest {
 
     @Test
     fun `parse user wire link correctly`() {
-        val link = "wireguard://AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA%3D@engage.cloudflareclient.co m:2408? address=172.16.0.2% 2F32% 2C2606%3A4700%3A11 0%3A8d70%3A8df1%3A6e3d%3A693b%3Aea40% 2F128&publickey=bmXOC%2BF1FxEMF9dyiK2H5%2 F1SUtzH0JuVo51h2wPfgyo%3D&privatekey=98qlf4c Snq2VMmonjeWZI1dS1994IzfbR%2FfRdG%2FiCoE% 3D#SELOOM1-WARP%20BALLY%20"
+        val link = "wireguard://98qlf4cSnq2VMmonjeWZI1dS1994IzfbR %2FfRdG%2FiCoE%3D@engage.cloudflareclient.co m:2408? address=172.16.0.2% 2F32% 2C2606%3A4700%3A11 0%3A8d70%3A8df1%3A6e3d%3A693b%3Aea40% 2F128&publickey=bmXOC%2BF1FxEMF9dyiK2H5%2 F1SUtzH0JuVo51h2wPfgyo%3D&privatekey=98qlf4c Snq2VMmonjeWZI1dS1994IzfbR%2FfRdG%2FiCoE% 3D#SELOOM1-WARP%20BALLY%20"
         val server = WireGuardLinkParser.parse(link)
         assertNotNull(server)
         assertEquals("SELOOM1-WARP BALLY", server!!.name)
         assertEquals("engage.cloudflareclient.com:2408", server.endpoint)
         assertEquals("bmXOC+F1FxEMF9dyiK2H5/1SUtzH0JuVo51h2wPfgyo=", server.publicKey)
-        assertEquals("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=", server.privateKey)
+        assertEquals("98qlf4cSnq2VMmonjeWZI1dS1994IzfbR/fRdG/iCoE=", server.privateKey)
 
         val conf = server.toWireGuardConfigText()
         assertTrue(conf.contains("[Interface]"))
