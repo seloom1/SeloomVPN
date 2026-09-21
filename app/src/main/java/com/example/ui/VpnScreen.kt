@@ -36,6 +36,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.example.R
 import com.example.ui.components.CockpitSpeedCard
+import com.example.ui.components.BlacklistSelectorCard
+import com.example.ui.components.AppBlacklistDialog
 import com.example.ui.components.DeveloperBrandCard
 import com.example.ui.components.FooterSection
 import com.example.ui.components.HeaderSection
@@ -57,6 +59,8 @@ fun VpnScreen(
     val selectedServer by viewModel.selectedServer.collectAsState()
     val showServerDialog by viewModel.showServerDialog.collectAsState()
     val feedbackMessage by viewModel.feedbackMessage.collectAsState()
+    val showBlacklistDialog by viewModel.showBlacklistDialog.collectAsState()
+    val excludedApplications by viewModel.excludedApplications.collectAsState()
 
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -163,6 +167,11 @@ fun VpnScreen(
                     }
                 )
 
+                BlacklistSelectorCard(
+                    selectedCount = excludedApplications.size,
+                    onClick = { viewModel.setBlacklistDialogVisible(true) }
+                )
+
                 Spacer(modifier = Modifier.height(6.dp))
 
                 // Developer Brand & Telegram Card
@@ -197,6 +206,15 @@ fun VpnScreen(
                     onDismiss = {
                         viewModel.setServerDialogVisible(false)
                     }
+                )
+            }
+
+            if (showBlacklistDialog) {
+                AppBlacklistDialog(
+                    apps = viewModel.installedApplications,
+                    selectedPackages = excludedApplications,
+                    onSave = { viewModel.saveExcludedApplications(it) },
+                    onDismiss = { viewModel.setBlacklistDialogVisible(false) }
                 )
             }
         }

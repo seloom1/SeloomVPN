@@ -16,14 +16,16 @@ data class VpnServer(
     val isCustom: Boolean = false,
     val note: String = ""
 ) {
-    fun toWireGuardConfigText(): String {
+    fun toWireGuardConfigText(excludedApplications: Set<String> = emptySet()): String {
+        val excluded = excludedApplications.filter { it.isNotBlank() }.joinToString(",")
+        val excludedLine = if (excluded.isNotBlank()) "ExcludedApplications = $excluded\n" else ""
         return """
 [Interface]
 PrivateKey = $privateKey
 Address = $address
 DNS = $dns
-MTU = $mtu
-
+        MTU = $mtu
+$excludedLine
 [Peer]
 PublicKey = $publicKey
 Endpoint = $endpoint

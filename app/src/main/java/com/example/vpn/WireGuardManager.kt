@@ -3,6 +3,7 @@ package com.example.vpn
 import android.content.Context
 import android.util.Log
 import com.example.model.VpnServer
+import com.example.data.ServerRepository
 import com.wireguard.android.backend.GoBackend
 import com.wireguard.android.backend.Statistics
 import com.wireguard.android.backend.Tunnel
@@ -36,6 +37,7 @@ data class SpeedMetrics(
 class WireGuardManager(private val context: Context) {
     private val scope = CoroutineScope(Dispatchers.IO + Job())
     private val networkInfoService = NetworkInfoService()
+    private val repository = ServerRepository(context.applicationContext)
     private val backend: GoBackend? = try {
         GoBackend(context.applicationContext)
     } catch (e: Exception) {
@@ -66,8 +68,11 @@ class WireGuardManager(private val context: Context) {
                 require(server.publicKey.isNotBlank()) { "مفتاح WireGuard العام مفقود" }
                 require(server.endpoint.contains(":")) { "عنوان السيرفر غير صالح" }
 
+                val excludedApplications = repository.getExcludedApplications()
+                    .filter { it != context.packageName }
+                    .toSet()
                 val config = Config.parse(
-                    ByteArrayInputStream(server.toWireGuardConfigText().toByteArray(StandardCharsets.UTF_8))
+                    ByteArrayInputStream(server.toWireGuardConfigText(excludedApplications).toByteArray(StandardCharsets.UTF_8))
                 )
                 val tunnel = object : Tunnel {
                     override fun getName(): String = TUNNEL_NAME

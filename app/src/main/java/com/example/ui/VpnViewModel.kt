@@ -7,11 +7,13 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.net.VpnService
+import android.content.pm.PackageManager
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.ServerRepository
 import com.example.model.VpnServer
+import com.example.model.InstalledApp
 import com.example.vpn.SpeedMetrics
 import com.example.vpn.VpnStatus
 import com.example.vpn.WireGuardLinkParser
@@ -51,6 +53,26 @@ class VpnViewModel(application: Application) : AndroidViewModel(application) {
     private val _feedbackMessage = MutableStateFlow<String?>(null)
     val feedbackMessage: StateFlow<String?> = _feedbackMessage.asStateFlow()
 
+    private val _showBlacklistDialog = MutableStateFlow(false)
+    val showBlacklistDialog: StateFlow<Boolean> = _showBlacklistDialog.asStateFlow()
+
+    private val _excludedApplications = MutableStateFlow(repository.getExcludedApplications())
+    val excludedApplications: StateFlow<Set<String>> = _excludedApplications.asStateFlow()
+
+    val installedApplications: List<InstalledApp> = application.packageManager
+        .getInstalledApplications(PackageManager.GET_META_DATA)
+        .asSequence()
+        .filter { it.packageName != application.packageName }
+        .filter { application.packageManager.getLaunchIntentForPackage(it.packageName) != null }
+        .map { InstalledApp(
+            packageName = it.packageName,
+            label = application.packageManager.getApplicationLabel(it).toString(),
+            isSystemApp = (it.flags and android.content.pm.ApplicationInfo.FLAG_SYSTEM != 0) ||
+                (it.flags and android.content.pm.ApplicationInfo.FLAG_UPDATED_SYSTEM_APP != 0)
+        ) }
+        .sortedBy { it.label.lowercase() }
+        .toList()
+
     fun setServerDialogVisible(visible: Boolean) {
         _showServerDialog.value = visible
     }
@@ -61,6 +83,25 @@ class VpnViewModel(application: Application) : AndroidViewModel(application) {
 
     fun clearFeedback() {
         _feedbackMessage.value = null
+    }
+
+    fun setBlacklistDialogVisible(visible: Boolean) {
+        _showBlacklistDialog.value = visible
+    }
+
+    fun saveExcludedApplications(packages: Set<String>) {
+        val cleanPackages = packages.filter { it != getApplication<Application>().packageName }.toSet()
+        repository.setExcludedApplications(cleanPackages)
+        _excludedApplications.value = cleanPackages
+        _showBlacklistDialog.value = false
+        _feedbackMessage.value = "تم حفظ التطبيقات المستثناة"
+        if (vpnStatus.value == VpnStatus.CONNECTED) {
+            wireGuardManager.disconnect()
+            viewModelScope.launch {
+                kotlinx.coroutines.delay(300)
+                wireGuardManager.connect(_selectedServer.value)
+            }
+        }
     }
 
     fun selectServer(server: VpnServer) {

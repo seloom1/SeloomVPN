@@ -85,4 +85,11 @@ class ServerRepository(context: Context) {
     fun setSelectedServerId(id: String) {
         prefs.edit().putString("selected_server_id", id).apply()
     }
+
+    fun getExcludedApplications(): Set<String> =
+        prefs.getStringSet("excluded_applications", emptySet()).orEmpty()
+
+    fun setExcludedApplications(packages: Set<String>) {
+        prefs.edit().putStringSet("excluded_applications", packages).apply()
+    }
 }
