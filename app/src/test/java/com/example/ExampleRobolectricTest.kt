@@ -36,5 +36,6 @@ class ExampleRobolectricTest {
         assertTrue(conf.contains("[Interface]"))
         assertTrue(conf.contains("[Peer]"))
         assertTrue(conf.contains("Endpoint = engage.cloudflareclient.com:2408"))
+        assertTrue(server.toWireGuardConfigText(setOf("com.tencent.ig")).contains("ExcludedApplications = com.tencent.ig"))
     }
 }

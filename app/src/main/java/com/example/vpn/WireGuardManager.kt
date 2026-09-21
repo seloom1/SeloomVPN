@@ -59,59 +59,72 @@ class WireGuardManager(private val context: Context) {
     private var lastTxBytes = 0L
 
     fun connect(server: VpnServer) {
-        scope.launch {
-            try {
-                _vpnStatus.value = VpnStatus.CONNECTING
-                _errorMessage.value = null
-                val currentBackend = backend ?: error("لم يتم تهيئة محرك WireGuard")
-                require(server.privateKey.isNotBlank()) { "مفتاح WireGuard الخاص مفقود" }
-                require(server.publicKey.isNotBlank()) { "مفتاح WireGuard العام مفقود" }
-                require(server.endpoint.contains(":")) { "عنوان السيرفر غير صالح" }
+        scope.launch { connectNow(server) }
+    }
 
-                val excludedApplications = repository.getExcludedApplications()
-                    .filter { it != context.packageName }
-                    .toSet()
-                val config = Config.parse(
-                    ByteArrayInputStream(server.toWireGuardConfigText(excludedApplications).toByteArray(StandardCharsets.UTF_8))
-                )
-                val tunnel = object : Tunnel {
-                    override fun getName(): String = TUNNEL_NAME
-                    override fun onStateChange(newState: Tunnel.State) {
-                        Log.d(TAG, "Tunnel state changed: $newState")
-                        when (newState) {
-                            Tunnel.State.UP -> {
-                                _vpnStatus.value = VpnStatus.CONNECTED
-                                onConnected()
-                            }
-                            Tunnel.State.DOWN -> {
-                                _vpnStatus.value = VpnStatus.DISCONNECTED
-                                onDisconnected()
-                            }
-                            Tunnel.State.TOGGLE -> Unit
+    /** Replaces the active tunnel only after the previous tunnel is fully down. */
+    fun reconnect(server: VpnServer) {
+        scope.launch {
+            disconnectNow()
+            delay(300)
+            connectNow(server)
+        }
+    }
+
+    private suspend fun connectNow(server: VpnServer) {
+        try {
+            _vpnStatus.value = VpnStatus.CONNECTING
+            _errorMessage.value = null
+            val currentBackend = backend ?: error("لم يتم تهيئة محرك WireGuard")
+            require(server.privateKey.isNotBlank()) { "مفتاح WireGuard الخاص مفقود" }
+            require(server.publicKey.isNotBlank()) { "مفتاح WireGuard العام مفقود" }
+            require(server.endpoint.contains(":")) { "عنوان السيرفر غير صالح" }
+            val excludedApplications = repository.getExcludedApplications()
+                .filter { it.isNotBlank() && it != context.packageName }
+                .toSet()
+            Log.i(TAG, "Applying ${excludedApplications.size} excluded applications")
+            val config = Config.parse(
+                ByteArrayInputStream(server.toWireGuardConfigText(excludedApplications).toByteArray(StandardCharsets.UTF_8))
+            )
+            val tunnel = object : Tunnel {
+                override fun getName(): String = TUNNEL_NAME
+                override fun onStateChange(newState: Tunnel.State) {
+                    Log.d(TAG, "Tunnel state changed: $newState")
+                    when (newState) {
+                        Tunnel.State.UP -> {
+                            _vpnStatus.value = VpnStatus.CONNECTED
+                            onConnected()
                         }
+                        Tunnel.State.DOWN -> {
+                            _vpnStatus.value = VpnStatus.DISCONNECTED
+                            onDisconnected()
+                        }
+                        Tunnel.State.TOGGLE -> Unit
                     }
                 }
-                activeTunnel = tunnel
-                currentBackend.setState(tunnel, Tunnel.State.UP, config)
-            } catch (e: Exception) {
-                Log.e(TAG, "Connection error", e)
-                _vpnStatus.value = VpnStatus.ERROR
-                _errorMessage.value = e.localizedMessage ?: "فشل تشغيل نفق WireGuard"
-                stopMonitoring()
             }
+            activeTunnel = tunnel
+            currentBackend.setState(tunnel, Tunnel.State.UP, config)
+        } catch (e: Exception) {
+            Log.e(TAG, "Connection error", e)
+            _vpnStatus.value = VpnStatus.ERROR
+            _errorMessage.value = e.localizedMessage ?: "فشل تشغيل نفق WireGuard"
+            stopMonitoring()
         }
     }
 
     fun disconnect() {
-        scope.launch {
-            try {
-                activeTunnel?.let { tunnel -> backend?.setState(tunnel, Tunnel.State.DOWN, null) }
-            } catch (e: Exception) {
-                Log.e(TAG, "Error disconnecting", e)
-            } finally {
-                _vpnStatus.value = VpnStatus.DISCONNECTED
-                onDisconnected()
-            }
+        scope.launch { disconnectNow() }
+    }
+
+    private suspend fun disconnectNow() {
+        try {
+            activeTunnel?.let { tunnel -> backend?.setState(tunnel, Tunnel.State.DOWN, null) }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error disconnecting", e)
+        } finally {
+            _vpnStatus.value = VpnStatus.DISCONNECTED
+            onDisconnected()
         }
     }
 

@@ -96,11 +96,7 @@ class VpnViewModel(application: Application) : AndroidViewModel(application) {
         _showBlacklistDialog.value = false
         _feedbackMessage.value = "تم حفظ التطبيقات المستثناة"
         if (vpnStatus.value == VpnStatus.CONNECTED) {
-            wireGuardManager.disconnect()
-            viewModelScope.launch {
-                kotlinx.coroutines.delay(300)
-                wireGuardManager.connect(_selectedServer.value)
-            }
+            wireGuardManager.reconnect(_selectedServer.value)
         }
     }
 
