@@ -68,6 +68,8 @@ fun CockpitSpeedCard(
 ) {
     val isConnected = vpnStatus == VpnStatus.CONNECTED
     val isConnecting = vpnStatus == VpnStatus.CONNECTING
+    val downloadDisplay = formatSpeed(if (isConnected) downloadSpeed else 0f)
+    val uploadDisplay = formatSpeed(if (isConnected) uploadSpeed else 0f)
 
     // Subtle pulsing animation for active/connecting state
     val infiniteTransition = rememberInfiniteTransition(label = "powerPulse")
@@ -158,7 +160,7 @@ fun CockpitSpeedCard(
                 Spacer(modifier = Modifier.height(2.dp))
 
                 Text(
-                    text = if (isConnected) String.format(Locale.US, "%.1f", downloadSpeed) else "0.0",
+                    text = downloadDisplay.value,
                     style = TextStyle(
                         fontSize = 28.sp,
                         fontWeight = FontWeight.Black,
@@ -168,7 +170,7 @@ fun CockpitSpeedCard(
                 )
 
                 Text(
-                    text = "MB/s",
+                    text = downloadDisplay.unit,
                     style = TextStyle(
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
@@ -346,7 +348,7 @@ fun CockpitSpeedCard(
                 Spacer(modifier = Modifier.height(2.dp))
 
                 Text(
-                    text = if (isConnected) String.format(Locale.US, "%.1f", uploadSpeed) else "0.0",
+                    text = uploadDisplay.value,
                     style = TextStyle(
                         fontSize = 28.sp,
                         fontWeight = FontWeight.Black,
@@ -356,7 +358,7 @@ fun CockpitSpeedCard(
                 )
 
                 Text(
-                    text = "MB/s",
+                    text = uploadDisplay.unit,
                     style = TextStyle(
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
@@ -375,5 +377,16 @@ fun CockpitSpeedCard(
                 )
             }
         }
+    }
+}
+
+private data class SpeedDisplay(val value: String, val unit: String)
+
+private fun formatSpeed(speedKBps: Float): SpeedDisplay {
+    val safeSpeed = speedKBps.coerceAtLeast(0f)
+    return if (safeSpeed >= 1024f) {
+        SpeedDisplay(String.format(Locale.US, "%.1f", safeSpeed / 1024f), "MB/s")
+    } else {
+        SpeedDisplay(String.format(Locale.US, "%.1f", safeSpeed), "KB/s")
     }
 }

@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.net.VpnService
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.ServerRepository
@@ -15,6 +16,7 @@ import com.example.vpn.SpeedMetrics
 import com.example.vpn.VpnStatus
 import com.example.vpn.WireGuardLinkParser
 import com.example.vpn.WireGuardManager
+import com.example.vpn.VpnForegroundService
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -25,7 +27,7 @@ import kotlinx.coroutines.launch
 class VpnViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository = ServerRepository(application)
-    private val wireGuardManager = WireGuardManager(application)
+    private val wireGuardManager = WireGuardManager.getInstance(application)
 
     val vpnStatus: StateFlow<VpnStatus> = wireGuardManager.vpnStatus
     val metrics: StateFlow<SpeedMetrics> = wireGuardManager.metrics
@@ -104,6 +106,9 @@ class VpnViewModel(application: Application) : AndroidViewModel(application) {
         when (vpnStatus.value) {
             VpnStatus.CONNECTED, VpnStatus.CONNECTING -> {
                 wireGuardManager.disconnect()
+                getApplication<Application>().stopService(
+                    Intent(getApplication(), VpnForegroundService::class.java)
+                )
             }
             VpnStatus.DISCONNECTED, VpnStatus.ERROR -> {
                 val vpnIntent = VpnService.prepare(getApplication())
@@ -121,6 +126,11 @@ class VpnViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun connectNow() {
+        ContextCompat.startForegroundService(
+            getApplication(),
+            Intent(getApplication(), VpnForegroundService::class.java)
+                .setAction(VpnForegroundService.ACTION_START)
+        )
         wireGuardManager.connect(_selectedServer.value)
     }
 

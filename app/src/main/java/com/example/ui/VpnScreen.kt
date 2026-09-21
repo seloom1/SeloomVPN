@@ -131,8 +131,8 @@ fun VpnScreen(
                 // Central Cockpit HUD Card (Download | Power Button | Upload)
                 CockpitSpeedCard(
                     vpnStatus = vpnStatus,
-                    downloadSpeed = metrics.downloadSpeedMbps,
-                    uploadSpeed = metrics.uploadSpeedMbps,
+                    downloadSpeed = metrics.downloadSpeedKBps,
+                    uploadSpeed = metrics.uploadSpeedKBps,
                     onPowerClick = {
                         viewModel.toggleConnection { intent ->
                             vpnLauncher.launch(intent)

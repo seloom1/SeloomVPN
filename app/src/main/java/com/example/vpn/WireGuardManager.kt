@@ -22,8 +22,8 @@ import java.nio.charset.StandardCharsets
 enum class VpnStatus { DISCONNECTED, CONNECTING, CONNECTED, ERROR }
 
 data class SpeedMetrics(
-    val downloadSpeedMbps: Float = 0f,
-    val uploadSpeedMbps: Float = 0f,
+    val downloadSpeedKBps: Float = 0f,
+    val uploadSpeedKBps: Float = 0f,
     val pingMs: Int = 0,
     val ipAddress: String = "—",
     val country: String = "غير معروف",
@@ -121,8 +121,8 @@ class WireGuardManager(private val context: Context) {
     private fun onDisconnected() {
         stopMonitoring()
         _metrics.value = _metrics.value.copy(
-            downloadSpeedMbps = 0f,
-            uploadSpeedMbps = 0f,
+            downloadSpeedKBps = 0f,
+            uploadSpeedKBps = 0f,
             durationSeconds = 0L,
             totalDownloadBytes = 0L,
             totalUploadBytes = 0L
@@ -151,9 +151,9 @@ class WireGuardManager(private val context: Context) {
 
                 val rxDiff = if (currentRx >= lastRxBytes) currentRx - lastRxBytes else 0L
                 val txDiff = if (currentTx >= lastTxBytes) currentTx - lastTxBytes else 0L
-                // Mbps = bytes * 8 / 1,000,000 / seconds. Never fabricate a speed.
-                val dlRate = (rxDiff * 8.0 / 1_000_000.0).toFloat()
-                val ulRate = (txDiff * 8.0 / 1_000_000.0).toFloat()
+                // KB/s = bytes / 1024 / second. The UI promotes values >= 1024 KB/s to MB/s.
+                val dlRate = (rxDiff / 1024.0).toFloat()
+                val ulRate = (txDiff / 1024.0).toFloat()
                 lastRxBytes = currentRx
                 lastTxBytes = currentTx
 
@@ -162,8 +162,8 @@ class WireGuardManager(private val context: Context) {
                 }
                 if (seconds % 30 == 0) refreshNetworkInfo()
                 _metrics.value = _metrics.value.copy(
-                    downloadSpeedMbps = dlRate,
-                    uploadSpeedMbps = ulRate,
+                    downloadSpeedKBps = dlRate,
+                    uploadSpeedKBps = ulRate,
                     totalDownloadBytes = currentRx,
                     totalUploadBytes = currentTx,
                     durationSeconds = (System.currentTimeMillis() - connectionStartTime) / 1000
@@ -190,5 +190,13 @@ class WireGuardManager(private val context: Context) {
     companion object {
         private const val TAG = "WireGuardManager"
         private const val TUNNEL_NAME = "SELOOM_VPN"
+
+        @Volatile
+        private var instance: WireGuardManager? = null
+
+        fun getInstance(context: Context): WireGuardManager =
+            instance ?: synchronized(this) {
+                instance ?: WireGuardManager(context.applicationContext).also { instance = it }
+            }
     }
 }
